@@ -173,6 +173,12 @@ public abstract class AbstractNIOConnPool<T, C, E extends PoolEntry<T, C>>
             final T route, final Object state,
             final long connectTimeout, final TimeUnit tunit,
             final FutureCallback<E> callback) {
+        return this.lease(route, state, connectTimeout, connectTimeout, tunit, callback);
+    }
+
+    public Future<E> lease(
+            final T route, final Object state,
+            final long connectTimeout, final long leaseTimeout, final TimeUnit tunit, final FutureCallback<E> callback) {
         if (route == null) {
             throw new IllegalArgumentException("Route may not be null");
         }
@@ -185,8 +191,9 @@ public abstract class AbstractNIOConnPool<T, C, E extends PoolEntry<T, C>>
         this.lock.lock();
         try {
             long timeout = connectTimeout > 0 ? tunit.toMillis(connectTimeout) : 0;
-            BasicFuture<E> future = new BasicFuture<E>(callback);
-            LeaseRequest<T, C, E> request = new LeaseRequest<T, C, E>(route, state, timeout, future);
+            final BasicFuture<E> future = new BasicFuture<E>(callback);
+            final LeaseRequest<T, C, E> request = new LeaseRequest<T, C, E>(route, state, timeout, leaseTimeout, future);
+
             this.leasingRequests.add(request);
 
             processPendingRequests();
